@@ -1,7 +1,7 @@
-node_modules
 .travis.yml
-volumes
+**/.git*
+**/*docker*
+**/*sample*
 config.js
 sample-config.js
-.git
-.gitignore
+volumes/

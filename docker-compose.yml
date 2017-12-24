@@ -1,11 +1,11 @@
 version: '3'
 services:
   gekko:
-    restart: always
-    build: ./
+    # restart: always
+    build: .
     volumes:
-      - ./volumes/gekko/history:/usr/src/app/history
-      - ./config.js:/usr/src/app/config.js
+      - ./volumes/gekko/history:${WORKDIR}/history
+      - ./config.js:${WORKDIR}/config.js
     links:
       - redis
 #      - postgresql
@@ -21,7 +21,7 @@ services:
 #     - DOMAIN=gekko
 
   redis:
-    image: redis:latest
+    image: redis:alpine
     volumes:
       - ./volumes/redis:/data
 ## optionally uncomment if you wish to use nginx as a frontend

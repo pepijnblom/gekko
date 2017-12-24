@@ -1,28 +1,32 @@
-FROM node:8
+FROM golang:alpine as golang
+RUN apk add --no-cache build-base git && \
+    go get github.com/tj/node-prune/cmd/node-prune
 
+FROM node:8-alpine as build
+WORKDIR /usr/src/app
+COPY package*.json ./
+COPY --from=golang /go/bin/node-prune /usr/local/bin/
+RUN set -x && \
+    apk add --no-cache python build-base && \
+    npm install -g --production node-gyp && \
+    npm install --production && \
+    npm install --production redis@0.10.0 talib@1.0.2 tulind@0.8.7 pg && \
+    du -h && \
+    node-prune && \
+    du -h
+    
+FROM node:8-alpine
+# Set environment vars
 ENV HOST localhost
 ENV PORT 3000
-
-# Create app directory
-RUN mkdir -p /usr/src/app
-WORKDIR /usr/src/app
-
-# Install GYP dependencies globally, will be used to code build other dependencies
-RUN npm install -g --production node-gyp && \
-    npm cache clean --force
-
-# Install app dependencies
-COPY package.json /usr/src/app
-RUN npm install --production && \
-    npm install --production redis@0.10.0 talib@1.0.2 tulind@0.8.7 pg && \
-    npm cache clean --force
-
-# Bundle app source
-COPY . /usr/src/app
-
+ENV WORKDIR /app
 EXPOSE 3000
-RUN chmod +x /usr/src/app/docker-entrypoint.sh
-ENTRYPOINT ["/usr/src/app/docker-entrypoint.sh"]
-
-
-CMD [ "npm", "start" ]
+# Prepare the application
+WORKDIR ${WORKDIR}
+COPY . .
+COPY --from=build /usr/src/app/node_modules/ /app/node_modules/
+RUN set -x && \
+    apk add --no-cache tini &&  \
+    ./configureUI.sh
+ENTRYPOINT [ "/sbin/tini", "-v", "--" ]
+CMD [ "node", "gekko.js", "--config", "config.js", "--ui" ]
